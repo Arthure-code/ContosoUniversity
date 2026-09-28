@@ -156,7 +156,7 @@ namespace ContosoUniversity.Controllers
                         }
                         if (databaseValues.InstructorID != clientValues.InstructorID)
                         {
-                            Instructor databaseInstructor = await _context.Instructors.FirstOrDefaultAsync(i => i.ID == databaseValues.InstructorID);
+                            Instructor? databaseInstructor = await _context.Instructors.FirstOrDefaultAsync(i => i.ID == databaseValues.InstructorID);
                             ModelState.AddModelError("InstructorID", $"Current value: {databaseInstructor?.FullName}");
                         }
 
@@ -165,7 +165,7 @@ namespace ContosoUniversity.Controllers
                                 + "edit operation was canceled and the current values in the database "
                                 + "have been displayed. If you still want to edit this record, click "
                                 + "the Save button again. Otherwise click the Back to List hyperlink.");
-                        departmentToUpdate.RowVersion = (byte[])databaseValues.RowVersion;
+                        departmentToUpdate.RowVersion = databaseValues.RowVersion;
                         ModelState.Remove("RowVersion");
                     }
                 }

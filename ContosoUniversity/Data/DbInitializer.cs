@@ -238,8 +238,8 @@ namespace ContosoUniversity.Data
             {
                 var enrollmentInDataBase = context.Enrollments.Where(
                     s =>
-                            s.Student.ID == e.StudentID &&
-                            s.Course.CourseID == e.CourseID).SingleOrDefault();
+                            s.StudentID == e.StudentID &&
+                            s.CourseID == e.CourseID).SingleOrDefault();
                 if (enrollmentInDataBase == null)
                 {
                     context.Enrollments.Add(e);
