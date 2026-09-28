@@ -36,8 +36,10 @@ namespace ContosoUniversity
             {
                 var services = scope.ServiceProvider;
                 var context = services.GetRequiredService<SchoolContext>();
-                context.Database.EnsureCreated();
-                //selon les cas
+                // Les migrations creent et font evoluer la base. EnsureCreated
+                // ne les jouerait pas et laisserait la table d'historique vide,
+                // ce qui empecherait toute migration suivante de s'appliquer.
+                context.Database.Migrate();
                 DbInitializer.Initialize(context);
             }
 
