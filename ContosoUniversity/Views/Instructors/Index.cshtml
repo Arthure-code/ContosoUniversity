@@ -45,9 +45,9 @@
                     }
                 </td>
                 <td>
-                    @foreach (var course in item.CourseAssignments)
+                    @foreach (var course in item.CourseAssignments.Select(c => c.Course))
                     {
-                        @course.Course?.CourseID @course.Course?.Title <br />
+                        @course?.CourseID @course?.Title <br />
                     }
                 </td>
                 <td>

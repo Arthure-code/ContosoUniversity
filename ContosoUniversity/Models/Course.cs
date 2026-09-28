@@ -8,6 +8,7 @@ namespace ContosoUniversity.Models
     {
         [DatabaseGenerated(DatabaseGeneratedOption.None)]
         [Display(Name = "Number")]
+        [Range(1, 9999, ErrorMessage = "Le numéro doit se situer entre 1 et 9999.")]
         public int CourseID { get; set; }
 
         [StringLength(50, MinimumLength = 3)]
@@ -16,6 +17,8 @@ namespace ContosoUniversity.Models
         [Range(0, 5)]
         public int Credits { get; set; }
 
+        [Display(Name = "Department")]
+        [Range(1, int.MaxValue, ErrorMessage = "Le département est requis.")]
         public int DepartmentID { get; set; }
 
         public Department? Department { get; set; }

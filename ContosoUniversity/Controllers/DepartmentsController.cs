@@ -19,6 +19,14 @@ namespace ContosoUniversity.Controllers
             _context = context;
         }
 
+        /// <summary>
+        /// La liste des administrateurs possibles, avec celui deja retenu.
+        /// </summary>
+        private void PopulateAdministratorDropDownList(object? selectedAdministrator = null)
+        {
+            ViewData["InstructorID"] = new SelectList(_context.Instructors, "ID", "FullName", selectedAdministrator);
+        }
+
         // GET: Departments
         public async Task<IActionResult> Index()
         {
@@ -51,7 +59,7 @@ namespace ContosoUniversity.Controllers
         // GET: Departments/Create
         public IActionResult Create()
         {
-            ViewData["InstructorID"] = new SelectList(_context.Instructors, "ID", "FullName");
+            PopulateAdministratorDropDownList();
             return View();
         }
 
@@ -60,7 +68,7 @@ namespace ContosoUniversity.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("DepartmentID,Name,Budget,StartDate,InstructorID,RowVersion")] Department department)
+        public async Task<IActionResult> Create([Bind("Name,Budget,StartDate,InstructorID")] Department department)
         {
             if (ModelState.IsValid)
             {
@@ -68,7 +76,7 @@ namespace ContosoUniversity.Controllers
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["InstructorID"] = new SelectList(_context.Instructors, "ID", "FirstMidName", department.InstructorID);
+            PopulateAdministratorDropDownList(department.InstructorID);
             return View(department);
         }
 
@@ -88,7 +96,7 @@ namespace ContosoUniversity.Controllers
             {
                 return NotFound();
             }
-            ViewData["InstructorID"] = new SelectList(_context.Instructors, "ID", "FullName", department.InstructorID);
+            PopulateAdministratorDropDownList(department.InstructorID);
             return View(department);
         }
 
@@ -112,11 +120,11 @@ namespace ContosoUniversity.Controllers
                 await TryUpdateModelAsync(deletedDepartment);
                 ModelState.AddModelError(string.Empty,
                     "Unable to save changes. The department was deleted by another user.");
-                ViewData["InstructorID"] = new SelectList(_context.Instructors, "ID", "FullName", deletedDepartment.InstructorID);
+                PopulateAdministratorDropDownList(deletedDepartment.InstructorID);
                 return View(deletedDepartment);
             }
 
-            _context.Entry(departmentToUpdate).Property("RowVersion").OriginalValue = rowVersion;
+            _context.Entry(departmentToUpdate).Property(nameof(Department.RowVersion)).OriginalValue = rowVersion;
 
             if (await TryUpdateModelAsync<Department>(
                 departmentToUpdate,
@@ -130,48 +138,57 @@ namespace ContosoUniversity.Controllers
                 }
                 catch (DbUpdateConcurrencyException ex)
                 {
-                    var exceptionEntry = ex.Entries.Single();
-                    var clientValues = (Department)exceptionEntry.Entity;
-                    var databaseEntry = exceptionEntry.GetDatabaseValues();
-                    if (databaseEntry == null)
-                    {
-                        ModelState.AddModelError(string.Empty,
-                            "Unable to save changes. The department was deleted by another user.");
-                    }
-                    else
-                    {
-                        var databaseValues = (Department)databaseEntry.ToObject();
-
-                        if (databaseValues.Name != clientValues.Name)
-                        {
-                            ModelState.AddModelError("Name", $"Current value: {databaseValues.Name}");
-                        }
-                        if (databaseValues.Budget != clientValues.Budget)
-                        {
-                            ModelState.AddModelError("Budget", $"Current value: {databaseValues.Budget:c}");
-                        }
-                        if (databaseValues.StartDate != clientValues.StartDate)
-                        {
-                            ModelState.AddModelError("StartDate", $"Current value: {databaseValues.StartDate:d}");
-                        }
-                        if (databaseValues.InstructorID != clientValues.InstructorID)
-                        {
-                            Instructor? databaseInstructor = await _context.Instructors.FirstOrDefaultAsync(i => i.ID == databaseValues.InstructorID);
-                            ModelState.AddModelError("InstructorID", $"Current value: {databaseInstructor?.FullName}");
-                        }
-
-                        ModelState.AddModelError(string.Empty, "The record you attempted to edit "
-                                + "was modified by another user after you got the original value. The "
-                                + "edit operation was canceled and the current values in the database "
-                                + "have been displayed. If you still want to edit this record, click "
-                                + "the Save button again. Otherwise click the Back to List hyperlink.");
-                        departmentToUpdate.RowVersion = databaseValues.RowVersion;
-                        ModelState.Remove("RowVersion");
-                    }
+                    await ShowConcurrencyConflictAsync(ex, departmentToUpdate);
                 }
             }
-            ViewData["InstructorID"] = new SelectList(_context.Instructors, "ID", "FullName", departmentToUpdate.InstructorID);
+            PopulateAdministratorDropDownList(departmentToUpdate.InstructorID);
             return View(departmentToUpdate);
+        }
+
+        /// <summary>
+        /// Affiche, champ par champ, ce qu'un autre utilisateur a enregistre
+        /// entre le moment ou la page a ete ouverte et celui de la sauvegarde.
+        /// </summary>
+        private async Task ShowConcurrencyConflictAsync(DbUpdateConcurrencyException exception, Department departmentToUpdate)
+        {
+            var exceptionEntry = exception.Entries.Single();
+            var clientValues = (Department)exceptionEntry.Entity;
+            var databaseEntry = await exceptionEntry.GetDatabaseValuesAsync();
+
+            if (databaseEntry == null)
+            {
+                ModelState.AddModelError(string.Empty,
+                    "Unable to save changes. The department was deleted by another user.");
+                return;
+            }
+
+            var databaseValues = (Department)databaseEntry.ToObject();
+
+            if (databaseValues.Name != clientValues.Name)
+            {
+                ModelState.AddModelError("Name", $"Current value: {databaseValues.Name}");
+            }
+            if (databaseValues.Budget != clientValues.Budget)
+            {
+                ModelState.AddModelError("Budget", $"Current value: {databaseValues.Budget:c}");
+            }
+            if (databaseValues.StartDate != clientValues.StartDate)
+            {
+                ModelState.AddModelError("StartDate", $"Current value: {databaseValues.StartDate:d}");
+            }
+            if (databaseValues.InstructorID != clientValues.InstructorID)
+            {
+                Instructor? databaseInstructor = await _context.Instructors.FirstOrDefaultAsync(i => i.ID == databaseValues.InstructorID);
+                ModelState.AddModelError("InstructorID", $"Current value: {databaseInstructor?.FullName}");
+            }
+
+            ModelState.AddModelError(string.Empty, "The record you attempted to edit "
+                    + "was modified by another user after you got the original value. The "
+                    + "edit operation was canceled and the current values in the database "
+                    + "have been displayed. If you still want to edit this record, click "
+                    + "the Save button again. Otherwise click the Back to List hyperlink.");
+            departmentToUpdate.RowVersion = databaseValues.RowVersion;
+            ModelState.Remove(nameof(Department.RowVersion));
         }
 
         // GET: Departments/Delete/5
@@ -211,27 +228,30 @@ namespace ContosoUniversity.Controllers
         // POST: Departments/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Delete(Department department)
+        public async Task<IActionResult> Delete(int id, byte[]? rowVersion)
         {
+            var department = await _context.Departments.FirstOrDefaultAsync(m => m.DepartmentID == id);
+            if (department == null)
+            {
+                return RedirectToAction(nameof(Index));
+            }
+
+            if (rowVersion != null)
+            {
+                _context.Entry(department).Property(nameof(Department.RowVersion)).OriginalValue = rowVersion;
+            }
+
             try
             {
-                if (await _context.Departments.AnyAsync(m => m.DepartmentID == department.DepartmentID))
-                {
-                    _context.Departments.Remove(department);
-                    await _context.SaveChangesAsync();
-                }
+                _context.Departments.Remove(department);
+                await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
             catch (DbUpdateConcurrencyException /* ex */)
             {
                 //Log the error (uncomment ex variable name and write a log.)
-                return RedirectToAction(nameof(Delete), new { concurrencyError = true, id = department.DepartmentID });
+                return RedirectToAction(nameof(Delete), new { concurrencyError = true, id });
             }
-        }
-
-        private bool DepartmentExists(int id)
-        {
-            return _context.Departments.Any(e => e.DepartmentID == id);
         }
     }
 }

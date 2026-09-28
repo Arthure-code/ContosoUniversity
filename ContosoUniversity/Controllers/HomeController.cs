@@ -1,23 +1,19 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using ContosoUniversity.Models;
 using Microsoft.AspNetCore.Mvc;
 
 using Microsoft.EntityFrameworkCore;
 using ContosoUniversity.Data;
 using ContosoUniversity.Models.SchoolViewModels;
-using Microsoft.Extensions.Logging;
 using System.Data.Common;
 namespace ContosoUniversity.Controllers
 {
     public class HomeController : Controller
     {
-        private readonly ILogger<HomeController> _logger;
-
         private readonly SchoolContext _context;
 
-        public HomeController(ILogger<HomeController> logger, SchoolContext context)
+        public HomeController(SchoolContext context)
         {
-            _logger = logger;
             _context = context;
         }
 
@@ -62,12 +58,12 @@ namespace ContosoUniversity.Controllers
                             groups.Add(row);
                         }
                     }
-                    reader.Dispose();
+                    await reader.DisposeAsync();
                 }
             }
             finally
             {
-                conn.Close();
+                await conn.CloseAsync();
             }
             return View(groups);
         }

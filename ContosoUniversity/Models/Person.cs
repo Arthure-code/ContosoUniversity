@@ -1,10 +1,12 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Microsoft.AspNetCore.Mvc.ModelBinding;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ContosoUniversity.Models
 {
     public abstract class Person
     {
+        [BindNever]
         public int ID { get; set; }
         [StringLength(50)]
         [Required(ErrorMessage = "Le nom est requis.")]
