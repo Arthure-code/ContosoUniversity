@@ -27,11 +27,11 @@ namespace ContosoUniversity.Controllers
             viewModel.Instructors = await _context.Instructors
                   .Include(i => i.OfficeAssignment)
                   .Include(i => i.CourseAssignments)
-                    .ThenInclude(i => i.Course)
+                    .ThenInclude(i => i.Course!)
                         .ThenInclude(i => i.Enrollments)
                             .ThenInclude(i => i.Student)
                   .Include(i => i.CourseAssignments)
-                    .ThenInclude(i => i.Course)
+                    .ThenInclude(i => i.Course!)
                         .ThenInclude(i => i.Department)
                   .AsNoTracking()
                   .OrderBy(i => i.LastName)
@@ -41,7 +41,7 @@ namespace ContosoUniversity.Controllers
             {
                 ViewData["InstructorID"] = id.Value;
                 Instructor instructor = viewModel.Instructors.Single(i => i.ID == id.Value);
-                viewModel.Courses = instructor.CourseAssignments.Select(s => s.Course);
+                viewModel.Courses = instructor.CourseAssignments.Select(s => s.Course).Where(c => c != null)!;
             }
 
             if (courseID != null)
@@ -130,7 +130,7 @@ namespace ContosoUniversity.Controllers
                 viewModel.Add(new AssignedCourseData
                 {
                     CourseID = course.CourseID,
-                    Title = course.Title,
+                    Title = course.Title ?? string.Empty,
                     Assigned = instructorCourses.Contains(course.CourseID)
                 });
             }
@@ -144,14 +144,14 @@ namespace ContosoUniversity.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, [Bind("ID,LastName,FirstMidName,HireDate")] Instructor instructor)
         {
-                        if (id == null)
-            {
-                return NotFound();
-            }
-
             var instructorToUpdate = await _context.Instructors
                 .Include(i => i.OfficeAssignment)
                 .FirstOrDefaultAsync(s => s.ID == id);
+
+            if (instructorToUpdate == null)
+            {
+                return NotFound();
+            }
 
             if (await TryUpdateModelAsync<Instructor>(
                 instructorToUpdate,
@@ -194,6 +194,11 @@ namespace ContosoUniversity.Controllers
                     .ThenInclude(i => i.Course)
                 .FirstOrDefaultAsync(m => m.ID == id);
 
+            if (instructorToUpdate == null)
+            {
+                return NotFound();
+            }
+
             if (await TryUpdateModelAsync<Instructor>(
                 instructorToUpdate,
                 "",
@@ -233,7 +238,7 @@ namespace ContosoUniversity.Controllers
 
             var selectedCoursesHS = new HashSet<string>(selectedCourses);
             var instructorCourses = new HashSet<int>
-                (instructorToUpdate.CourseAssignments.Select(c => c.Course.CourseID));
+                (instructorToUpdate.CourseAssignments.Select(c => c.CourseID));
             foreach (var course in _context.Courses)
             {
                 if (selectedCoursesHS.Contains(course.CourseID.ToString()))
@@ -248,8 +253,11 @@ namespace ContosoUniversity.Controllers
 
                     if (instructorCourses.Contains(course.CourseID))
                     {
-                        CourseAssignment courseToRemove = instructorToUpdate.CourseAssignments.FirstOrDefault(i => i.CourseID == course.CourseID);
-                        _context.Remove(courseToRemove);
+                        CourseAssignment? courseToRemove = instructorToUpdate.CourseAssignments.FirstOrDefault(i => i.CourseID == course.CourseID);
+                        if (courseToRemove != null)
+                        {
+                            _context.Remove(courseToRemove);
+                        }
                     }
                 }
             }

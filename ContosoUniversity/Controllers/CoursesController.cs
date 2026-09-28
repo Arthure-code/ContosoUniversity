@@ -98,6 +98,11 @@ namespace ContosoUniversity.Controllers
             var courseToUpdate = await _context.Courses
                 .FirstOrDefaultAsync(c => c.CourseID == id);
 
+            if (courseToUpdate == null)
+            {
+                return NotFound();
+            }
+
             if (await TryUpdateModelAsync<Course>(courseToUpdate,
                 "",
                 c => c.Credits, c => c.DepartmentID, c => c.Title))
@@ -120,7 +125,7 @@ namespace ContosoUniversity.Controllers
         }
 
 
-        private void PopulateDepartmentsDropDownList(object selectedDepartment = null)
+        private void PopulateDepartmentsDropDownList(object? selectedDepartment = null)
         {
             var departmentsQuery = from d in _context.Departments
                                    orderby d.Name

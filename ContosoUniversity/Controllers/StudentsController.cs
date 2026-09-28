@@ -162,6 +162,11 @@ namespace ContosoUniversity.Controllers
             }
 
             var studentToUpdate = await _context.Students.FirstOrDefaultAsync(s => s.ID == id);
+            if (studentToUpdate == null)
+            {
+                return NotFound();
+            }
+
             if (ModelState.IsValid)
             {
                

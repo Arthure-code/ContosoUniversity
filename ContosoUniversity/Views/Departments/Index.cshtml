@@ -41,7 +41,7 @@
                     @Html.DisplayFor(modelItem => item.StartDate)
                 </td>
                 <td>
-                    @Html.DisplayFor(modelItem => item.Administrator.FullName)
+                    @item.Administrator?.FullName
                 </td>
                 <td>
                     <a asp-action="Edit" asp-route-id="@item.DepartmentID">Edit</a> |
