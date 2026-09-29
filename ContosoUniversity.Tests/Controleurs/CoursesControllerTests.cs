@@ -10,6 +10,8 @@ namespace ContosoUniversity.Tests.Controleurs
 {
     public class CoursesControllerTests
     {
+        private static readonly string[] DepartementsAttendus = { "Engineering", "English" };
+
         private readonly ContexteFactice _contexte = new ContexteFactice();
         private readonly CoursesController _controleur;
 
@@ -80,7 +82,7 @@ namespace ContosoUniversity.Tests.Controleurs
             //Alors
             object? propose = _controleur.ViewBag.DepartmentID;
             var liste = Assert.IsType<SelectList>(propose);
-            Assert.Equal(new[] { "Engineering", "English" }, liste.Select(element => element.Text));
+            Assert.Equal(DepartementsAttendus, liste.Select(element => element.Text));
         }
 
         [Fact]
@@ -245,7 +247,7 @@ namespace ContosoUniversity.Tests.Controleurs
             var redirection = Assert.IsType<RedirectToActionResult>(resultat);
             Assert.Equal("Delete", redirection.ActionName);
             Assert.Equal(1050, redirection.RouteValues!["id"]);
-            Assert.Equal(true, redirection.RouteValues!["saveChangesError"]);
+            Assert.True((bool)redirection.RouteValues!["saveChangesError"]!);
         }
     }
 }

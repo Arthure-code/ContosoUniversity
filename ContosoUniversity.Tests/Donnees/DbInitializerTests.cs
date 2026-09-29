@@ -8,6 +8,10 @@ namespace ContosoUniversity.Tests.Donnees
     public class DbInitializerTests
     {
         private static readonly DateTime Rentree2007 = new DateTime(2007, 9, 1, 0, 0, 0, DateTimeKind.Unspecified);
+        private static readonly string[] NomsDesEtudiants =
+        {
+            "Alexander", "Alonso", "Anand", "Barzdukas", "Li", "Justice", "Norman", "Olivetto"
+        };
 
         private readonly ContexteFactice _contexte = new ContexteFactice();
 
@@ -40,9 +44,7 @@ namespace ContosoUniversity.Tests.Donnees
 
             //Alors
             Assert.Equal(8, _contexte.Etudiants.Count);
-            Assert.Equal(
-                new[] { "Alexander", "Alonso", "Anand", "Barzdukas", "Li", "Justice", "Norman", "Olivetto" },
-                _contexte.Etudiants.Select(e => e.LastName));
+            Assert.Equal(NomsDesEtudiants, _contexte.Etudiants.Select(e => e.LastName));
 
             Student alexander = _contexte.Etudiants[0];
             Assert.Equal("Carson", alexander.FirstMidName);

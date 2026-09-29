@@ -33,6 +33,12 @@ namespace ContosoUniversity.Tests.Doubles
 
         public SchoolContext Contexte => Mock.Object;
 
+        /// <summary>
+        /// Les options du contexte, pour ouvrir un second contexte sur le
+        /// meme magasin et y ecrire ce qu'un autre utilisateur aurait ecrit.
+        /// </summary>
+        public DbContextOptions<SchoolContext> Options { get; }
+
         /// <param name="suiviReel">
         /// Laisse le suivi des entites d'Entity Framework fonctionner, pour
         /// les actions qui lisent la valeur d'origine d'une propriete. Le
@@ -40,11 +46,12 @@ namespace ContosoUniversity.Tests.Doubles
         /// </param>
         public ContexteFactice(bool suiviReel = false)
         {
-            DbContextOptions<SchoolContext> options = suiviReel
-                ? new DbContextOptionsBuilder<SchoolContext>().UseSqlServer("Server=aucun;Database=modele").Options
+            Options = suiviReel
+                ? new DbContextOptionsBuilder<SchoolContext>()
+                    .UseInMemoryDatabase("ecole-" + Guid.NewGuid()).Options
                 : new DbContextOptionsBuilder<SchoolContext>().Options;
 
-            Mock = new Mock<SchoolContext>(options) { CallBase = suiviReel };
+            Mock = new Mock<SchoolContext>(Options) { CallBase = suiviReel };
 
             EnsembleEtudiants = EnsembleFactice.Creer(Etudiants);
             EnsembleEnseignants = EnsembleFactice.Creer(Enseignants);
@@ -97,6 +104,18 @@ namespace ContosoUniversity.Tests.Doubles
 
                 return 0;
             });
+        }
+
+        /// <summary>
+        /// Suit l'entite comme une ligne lue puis modifiee, et laisse
+        /// l'enregistrement atteindre le magasin. C'est lui qui dira si la
+        /// ligne a change ou disparu, et qui levera l'exception de
+        /// concurrence : personne ne la fabrique.
+        /// </summary>
+        public void SuitLaModificationDe<TEntite>(TEntite entite) where TEntite : class
+        {
+            Contexte.Attach(entite).State = EntityState.Modified;
+            Mock.Setup(c => c.SaveChangesAsync(It.IsAny<CancellationToken>())).CallBase();
         }
 
         /// <summary>
