@@ -10,6 +10,11 @@ namespace ContosoUniversity.Tests.Controleurs
 {
     public class InstructorsControllerTests
     {
+        private static readonly string[] CoursDeLEnseignant = { "Composition" };
+        private static readonly int[] NumerosDesCours = { 1050, 2021 };
+        private static readonly bool[] CasesAttendues = { false, true };
+        private static readonly string[] Chemistry = { "1050" };
+
         private readonly ContexteFactice _contexte = new ContexteFactice();
         private readonly InstructorsController _controleur;
         private readonly Course _chemistry = new Course { CourseID = 1050, Title = "Chemistry", Credits = 3, DepartmentID = 3 };
@@ -80,7 +85,7 @@ namespace ContosoUniversity.Tests.Controleurs
 
             //Alors ses cours paraissent a cote de la liste
             var modele = Assert.IsType<InstructorIndexData>(Assert.IsType<ViewResult>(resultat).Model);
-            Assert.Equal(new[] { "Composition" }, modele.Courses.Select(c => c.Title));
+            Assert.Equal(CoursDeLEnseignant, modele.Courses.Select(c => c.Title));
             Assert.Equal(9, _controleur.ViewData["InstructorID"]);
         }
 
@@ -132,8 +137,8 @@ namespace ContosoUniversity.Tests.Controleurs
             //Alors les deux cours sont proposes, un seul est coche
             Assert.IsType<ViewResult>(resultat);
             var cours = Assert.IsType<List<AssignedCourseData>>(_controleur.ViewData["Courses"]);
-            Assert.Equal(new[] { 1050, 2021 }, cours.Select(c => c.CourseID));
-            Assert.Equal(new[] { false, true }, cours.Select(c => c.Assigned));
+            Assert.Equal(NumerosDesCours, cours.Select(c => c.CourseID));
+            Assert.Equal(CasesAttendues, cours.Select(c => c.Assigned));
         }
 
         [Fact]
@@ -157,7 +162,7 @@ namespace ContosoUniversity.Tests.Controleurs
             });
 
             //Lorsque
-            IActionResult resultat = await _controleur.Edit(9, new[] { "1050" });
+            IActionResult resultat = await _controleur.Edit(9, Chemistry);
 
             //Alors le cours coche est attribue, l'autre est retire
             Assert.Equal("Gowan 27", enseignant.OfficeAssignment!.Location);
@@ -310,7 +315,7 @@ namespace ContosoUniversity.Tests.Controleurs
             var redirection = Assert.IsType<RedirectToActionResult>(resultat);
             Assert.Equal("Delete", redirection.ActionName);
             Assert.Equal(9, redirection.RouteValues!["id"]);
-            Assert.Equal(true, redirection.RouteValues!["saveChangesError"]);
+            Assert.True((bool)redirection.RouteValues!["saveChangesError"]!);
         }
     }
 }
