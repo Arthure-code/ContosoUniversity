@@ -10,14 +10,14 @@ namespace ContosoUniversity.Data
         {
         }
 
-        public DbSet<Course> Courses { get; set; }
-        public DbSet<Enrollment> Enrollments { get; set; }
-        public DbSet<Student> Students { get; set; }
-        public DbSet<Department> Departments { get; set; }
-        public DbSet<Instructor> Instructors { get; set; }
-        public DbSet<OfficeAssignment> OfficeAssignments { get; set; }
-        public DbSet<CourseAssignment> CourseAssignments { get; set; }
-        public DbSet<Person> People { get; set; }
+        public virtual DbSet<Course> Courses { get; set; }
+        public virtual DbSet<Enrollment> Enrollments { get; set; }
+        public virtual DbSet<Student> Students { get; set; }
+        public virtual DbSet<Department> Departments { get; set; }
+        public virtual DbSet<Instructor> Instructors { get; set; }
+        public virtual DbSet<OfficeAssignment> OfficeAssignments { get; set; }
+        public virtual DbSet<CourseAssignment> CourseAssignments { get; set; }
+        public virtual DbSet<Person> People { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
