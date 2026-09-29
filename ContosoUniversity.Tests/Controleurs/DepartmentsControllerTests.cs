@@ -1,4 +1,5 @@
 using ContosoUniversity.Controllers;
+using ContosoUniversity.Data;
 using ContosoUniversity.Models;
 using ContosoUniversity.Tests.Doubles;
 using Microsoft.AspNetCore.Mvc;
@@ -11,6 +12,8 @@ namespace ContosoUniversity.Tests.Controleurs
     public class DepartmentsControllerTests
     {
         private static readonly DateTime Rentree = new DateTime(2007, 9, 1);
+
+        private static readonly string[] EnseignantsAttendus = { "Abercrombie, Kim", "Fakhouri, Fadi" };
 
         private readonly ContexteFactice _contexte = new ContexteFactice();
         private readonly DepartmentsController _controleur;
@@ -62,7 +65,7 @@ namespace ContosoUniversity.Tests.Controleurs
 
             //Alors la liste porte le nom complet, pas le prenom seul
             var liste = Assert.IsType<SelectList>(_controleur.ViewData["InstructorID"]);
-            Assert.Equal(new[] { "Abercrombie, Kim", "Fakhouri, Fadi" }, liste.Select(element => element.Text));
+            Assert.Equal(EnseignantsAttendus, liste.Select(element => element.Text));
         }
 
         [Fact]
@@ -179,6 +182,101 @@ namespace ContosoUniversity.Tests.Controleurs
                 contexte.Contexte.Entry(departement).Property(nameof(Department.RowVersion)).OriginalValue);
             contexte.VerifierUnEnregistrement();
             Assert.Equal("Index", Assert.IsType<RedirectToActionResult>(resultat).ActionName);
+        }
+
+        [Fact]
+        public async Task Edit_AnnonceLesValeursCourantesQuandUnAutreAEnregistreAvant()
+        {
+            //Etant donne un departement ouvert a l'ecran
+            var contexte = new ContexteFactice(suiviReel: true);
+            var departement = new Department
+            {
+                DepartmentID = 1,
+                Name = "English",
+                Budget = 350000m,
+                StartDate = Rentree,
+                InstructorID = 9,
+                RowVersion = new byte[] { 1 }
+            };
+            contexte.Departements.Add(departement);
+            contexte.Enseignants.Add(new Instructor { ID = 10, LastName = "Fakhouri", FirstMidName = "Fadi" });
+
+            //Et la meme ligne, deja changee en base par quelqu'un d'autre
+            using (var autre = new SchoolContext(contexte.Options))
+            {
+                autre.Departments.Add(new Department
+                {
+                    DepartmentID = 1,
+                    Name = "Literature",
+                    Budget = 400000m,
+                    StartDate = new DateTime(2008, 9, 1),
+                    InstructorID = 10,
+                    RowVersion = new byte[] { 9 }
+                });
+                autre.SaveChanges();
+            }
+
+            contexte.SuitLaModificationDe(departement);
+
+            var controleur = new DepartmentsController(contexte.Contexte);
+            Formulaire.Poser(controleur, new Dictionary<string, string>
+            {
+                ["Name"] = "English",
+                ["Budget"] = "350000",
+                ["StartDate"] = "2007-09-01",
+                ["InstructorID"] = "9"
+            });
+
+            //Lorsque l'enregistrement part avec le jeton lu a l'ouverture
+            IActionResult resultat = await controleur.Edit(1, new byte[] { 1 });
+
+            //Alors la page revient en annoncant, champ par champ, ce que
+            //l'autre utilisateur a ecrit
+            Assert.IsType<ViewResult>(resultat);
+            Assert.Contains("Literature", controleur.ModelState["Name"]!.Errors[0].ErrorMessage);
+            Assert.Contains("400", controleur.ModelState["Budget"]!.Errors[0].ErrorMessage);
+            Assert.Contains("2008", controleur.ModelState["StartDate"]!.Errors[0].ErrorMessage);
+            Assert.Contains("Fakhouri, Fadi", controleur.ModelState["InstructorID"]!.Errors[0].ErrorMessage);
+            Assert.Contains("modified by another user", controleur.ModelState[string.Empty]!.Errors[0].ErrorMessage);
+
+            //Et le jeton suit celui de la base, pour que le deuxieme envoi
+            //soit accepte
+            Assert.Equal(new byte[] { 9 }, departement.RowVersion);
+        }
+
+        [Fact]
+        public async Task Edit_AnnonceLaDisparitionQuandLAutreUtilisateurASupprimeLaLigne()
+        {
+            //Etant donne un departement ouvert a l'ecran, et la ligne
+            //supprimee en base entre temps
+            var contexte = new ContexteFactice(suiviReel: true);
+            var departement = new Department
+            {
+                DepartmentID = 1,
+                Name = "English",
+                Budget = 350000m,
+                StartDate = Rentree,
+                InstructorID = 9,
+                RowVersion = new byte[] { 1 }
+            };
+            contexte.Departements.Add(departement);
+            contexte.SuitLaModificationDe(departement);
+
+            var controleur = new DepartmentsController(contexte.Contexte);
+            Formulaire.Poser(controleur, new Dictionary<string, string>
+            {
+                ["Name"] = "English",
+                ["Budget"] = "350000",
+                ["StartDate"] = "2007-09-01",
+                ["InstructorID"] = "9"
+            });
+
+            //Lorsque
+            IActionResult resultat = await controleur.Edit(1, new byte[] { 1 });
+
+            //Alors l'utilisateur apprend que la ligne n'existe plus
+            Assert.IsType<ViewResult>(resultat);
+            Assert.Contains("deleted by another user", controleur.ModelState[string.Empty]!.Errors[0].ErrorMessage);
         }
 
         [Fact]
@@ -361,7 +459,7 @@ namespace ContosoUniversity.Tests.Controleurs
             var redirection = Assert.IsType<RedirectToActionResult>(resultat);
             Assert.Equal("Delete", redirection.ActionName);
             Assert.Equal(1, redirection.RouteValues!["id"]);
-            Assert.Equal(true, redirection.RouteValues!["concurrencyError"]);
+            Assert.True((bool)redirection.RouteValues!["concurrencyError"]!);
         }
     }
 }
