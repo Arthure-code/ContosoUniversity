@@ -152,7 +152,6 @@ namespace ContosoUniversity.Controllers
         private async Task ShowConcurrencyConflictAsync(DbUpdateConcurrencyException exception, Department departmentToUpdate)
         {
             var exceptionEntry = exception.Entries.Single();
-            var clientValues = (Department)exceptionEntry.Entity;
             var databaseEntry = await exceptionEntry.GetDatabaseValuesAsync();
 
             if (databaseEntry == null)
@@ -162,8 +161,18 @@ namespace ContosoUniversity.Controllers
                 return;
             }
 
-            var databaseValues = (Department)databaseEntry.ToObject();
+            await ShowDifferencesAsync(
+                (Department)exceptionEntry.Entity,
+                (Department)databaseEntry.ToObject(),
+                departmentToUpdate);
+        }
 
+        /// <summary>
+        /// Compare ce qui a ete envoye a ce qui se trouve en base, champ par
+        /// champ, et annonce chaque ecart sur le champ concerne.
+        /// </summary>
+        internal async Task ShowDifferencesAsync(Department clientValues, Department databaseValues, Department departmentToUpdate)
+        {
             if (databaseValues.Name != clientValues.Name)
             {
                 ModelState.AddModelError("Name", $"Current value: {databaseValues.Name}");

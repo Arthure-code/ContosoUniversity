@@ -40,8 +40,13 @@ jobs:
       - name: Build and analyze
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        shell: powershell
+        shell: pwsh
         run: |
-          ${{ runner.temp }}\scanner\dotnet-sonarscanner begin /k:"Arthure-code_ContosoUniversity" /o:"arthuredevsecops" /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+          # Sans ces deux lignes, seule la derniere commande decide du sort de
+          # l'etape : des tests en echec passeraient inapercus.
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
+          ${{ runner.temp }}\scanner\dotnet-sonarscanner begin /k:"Arthure-code_ContosoUniversity" /o:"arthuredevsecops" /d:sonar.token="$env:SONAR_TOKEN" /d:sonar.cs.cobertura.reportsPaths="**/coverage.cobertura.xml"
           dotnet build
-          ${{ runner.temp }}\scanner\dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+          dotnet test --no-build --collect:"XPlat Code Coverage"
+          ${{ runner.temp }}\scanner\dotnet-sonarscanner end /d:sonar.token="$env:SONAR_TOKEN"
